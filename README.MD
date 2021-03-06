@@ -25,7 +25,7 @@ See example
 - Add embedding headers
   - `target_include_directories(<target> PRIVATE ${BEMBED_some_identifier_INCLUDE_DIRS})`
 - Add embedding dependency
-  - `add_dependencies(<target> BEMBED_some_lib_BUILD)`
+  - `add_dependencies(<target> BEMBED_some_identifier_BUILD)`
 - `#include "binembed/some_identifier.hxx"`
 
 ## ToDo
