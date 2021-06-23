@@ -15,18 +15,18 @@ CMake
     - ``add_subdirectory(./path/to/BinaryEmbed)``
 
 #. Add embedding
-    - ``BinEmbed_AddEmbedding(some_identifier "./path/to/target.file")``
+    - ``BinEmbed_AddEmbedding(${identifier} "./path/to/target.file")``
 
 #. Add embedding sources to some dependent library/executable
-    - ``target_sources(<target> PRIVATE ${BEMBED_some_identifier_SRC})``
+    - ``target_sources(<target> PRIVATE ${BEMBED_${identifier}_SRC})``
 
 #. Add embedding headers
-    - ``target_include_directories(<target> PRIVATE ${BEMBED_some_identifier_INCLUDE_DIRS})``
+    - ``target_include_directories(<target> PRIVATE ${BEMBED_${identifier}_INCLUDE_DIRS})``
 
 #. Add embedding dependency
-    - ``add_dependencies(<target> BEMBED_some_identifier_BUILD)``
+    - ``add_dependencies(<target> BEMBED_${identifier}_BUILD)``
 
-#. ``#include "binembed/some_identifier.hxx"``
+#. ``#include "binembed/${identifier}.hxx"``
 
 What really happens
 *******************
