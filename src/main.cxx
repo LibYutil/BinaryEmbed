@@ -1,19 +1,30 @@
 
+#include <memory>
 #include <fstream>
-
 #include <iostream>
 #define n_print(expr) std::cout << expr << std::endl
 
 #include "CxxCli/CxxCli.hpp"
 
-int main(int argc, char ** argv) {
+namespace {
+    template <class x>
+    struct array_delete {
+        constexpr array_delete() noexcept = default;
+        void operator()(x * o) const noexcept { delete[] o; }
+    };
+}
+
+static int main0(int argc, char ** argv) {
+
+    static constexpr long long default_buffer_size = 256;
 
     const char * identifier = nullptr;
     const char * target = nullptr;
     const char * src_name = nullptr;
     const char * header_name = nullptr;
     const char * data_type = nullptr;
-    signed char use_c_linkage = 0;
+    bool use_c_linkage = false;
+    long long buffer_size = default_buffer_size;
 
     using namespace CxxCli;
 
@@ -25,7 +36,8 @@ int main(int argc, char ** argv) {
                 Sequence(Optional(Sequence(Const("--out-src-path"), Var("source") >> &src_name))) & UsageAsList & Doc("source path to output to"),
                 Sequence(Optional(Sequence(Const("--out-header-path"), Var("header") >> &header_name))) & UsageAsList & Doc("header path to output to"),
                 Sequence(Optional(Sequence(Const("--data-type"), Var("data-type") >> &data_type))) & UsageAsList & Doc("c++ data type to store data as [default = unsigned char]"),
-                Sequence(Optional(Const("--use-c-linkage") >> [&] { use_c_linkage = 1; })) & UsageAsList & Doc("declare embedded accessors with 'extern \"C\"' linkage")
+                Sequence(Optional(Const("--use-c-linkage") >> [&] { use_c_linkage = true; })) & UsageAsList & Doc("declare embedded accessors with 'extern \"C\"' linkage"),
+                Sequence(Optional(Sequence(Const("--copy-buffer"), Var("copy-buffer") >> &buffer_size))) & UsageAsList & Doc("size of the copy buffer to use [default = 256, min = 256]")
             ) & UsageAsList
         )
     );
@@ -39,35 +51,38 @@ int main(int argc, char ** argv) {
         }
     }
 
-    if (identifier == nullptr) { n_print("identifier not set"); cmd.printUsage(std::cerr, argv[0]); return 1; }
-    if (target == nullptr) { n_print("target not set"); cmd.printUsage(std::cerr, argv[0]); return 1; }
-    if (src_name == nullptr) { n_print("source name not set"); cmd.printUsage(std::cerr, argv[0]); return 1; }
-    if (header_name == nullptr) { n_print("header name not set"); cmd.printUsage(std::cerr, argv[0]); return 1; }
+    if (identifier == nullptr) { n_print("identifier not set"); cmd.printUsage(std::cerr, argv[0]); return -1; }
+    if (target == nullptr) { n_print("target not set"); cmd.printUsage(std::cerr, argv[0]); return -1; }
+    if (src_name == nullptr) { n_print("source name not set"); cmd.printUsage(std::cerr, argv[0]); return -1; }
+    if (header_name == nullptr) { n_print("header name not set"); cmd.printUsage(std::cerr, argv[0]); return -1; }
     if (data_type == nullptr) { data_type = "unsigned char"; }
+    if (buffer_size < 256) { n_print("copy-buffer too small: " << buffer_size); return -1; }
 
     {
         auto l_write_c_linkage_start = [&] (std::ofstream & s) {
-            if (use_c_linkage == 1) {
+            if (use_c_linkage) {
                 s << "#if __cplusplus" << "\n";
                 s << "extern \"C\" {" << "\n";
                 s << "#endif" << "\n";
             }
         };
         auto l_write_c_linkage_end = [&] (std::ofstream & s) {
-            if (use_c_linkage == 1) {
+            if (use_c_linkage) {
                 s << "#if __cplusplus" << "\n";
                 s << "}" << "\n";
                 s << "#endif" << "\n";
             }
         };
-        long long length = 0;
+        unsigned long long length = 0;
 
         {
-            std::basic_ifstream<unsigned char> input(target, std::ios::binary);
-            if (!input) { n_print("failed to open target file"); return -1; }
+            std::ifstream input(target, std::ios::binary);
+            if (!input) { n_print("failed to open target file: " << target); return -1; }
+            //input.exceptions(std::ios_base::failbit);
 
             std::ofstream src(src_name, std::ios::trunc);
-            if (!src) { n_print("failed to open source file"); return -1; }
+            if (!src) { n_print("failed to open source file" << src_name); return -1; }
+            src.exceptions(std::ios_base::failbit);
 
             src << "\n";
 
@@ -76,19 +91,29 @@ int main(int argc, char ** argv) {
             { // write data
                 src << "static const " << data_type <<  " " << identifier << "_data0[] = {";
                 {
-                    {
-                        unsigned char c;
-                        input.get(c);
-                        if (!input.good()) { goto lbl_skip_read; }
-                        src << (unsigned int)c;
-                        length++;
+                    unsigned char stackBuffer[default_buffer_size];
+                    std::unique_ptr<unsigned char, array_delete<unsigned char>> heapBuffer;
+                    unsigned char * buffer;
+                    if (buffer_size <= default_buffer_size) {
+                        buffer = stackBuffer;
+                    } else {
+                        buffer = (unsigned char *)std::malloc(buffer_size);
+                        heapBuffer.reset(buffer);
                     }
-                    while (true) {
-                        unsigned char c;
-                        input.get(c);
-                        if (!input.good()) { break; }
-                        src << ',' << (unsigned int)c;
-                        length++;
+                    std::streamsize count;
+
+                    if (!input.eof()) {
+                        count = input.readsome((char *)buffer, buffer_size);
+                        if (count == 0 || input.fail()) { goto lbl_skip_read; }
+                        src << (unsigned)buffer[0];
+                        for (std::streamsize i = 1; i < count; ++i) { src << ',' << (unsigned short)buffer[i]; }
+                        length += count;
+                    }
+                    while (!input.eof()) {
+                        count = input.readsome((char *)buffer, buffer_size);
+                        if (count == 0 || input.fail()) { break; }
+                        for (std::streamsize i = 0; i < count; ++i) { src << ',' << (unsigned short)buffer[i]; }
+                        length += count;
                     }
                 lbl_skip_read:;
                 }
@@ -98,7 +123,7 @@ int main(int argc, char ** argv) {
                 src << "extern const " << data_type << " * const " << identifier << "_data = " << identifier << "_data0;" << "\n";
 
                 src << "\n";
-                src << "extern const long long " << identifier << "_length = " << length << ";" << "\n";
+                src << "extern const unsigned long long " << identifier << "_length = " << length << ";" << "\n";
             }
             
             l_write_c_linkage_end(src);
@@ -109,14 +134,14 @@ int main(int argc, char ** argv) {
 
         {
             std::ofstream header(header_name, std::ios::trunc);
-            if (!header) { n_print("failed to open header file"); return -1; }
+            if (!header) { n_print("failed to open header file: " << header_name); return -1; }
 
             header << "\n";
             header << "#ifndef HEADER_BINARY_EMBED__" << identifier << "__EMBEDDING" << "\n";
             header << "#define HEADER_BINARY_EMBED__" << identifier << "__EMBEDDING 1" << "\n";
             l_write_c_linkage_start(header);
             header << "extern const " << data_type <<  " * const " << identifier << "_data;" << "\n";
-            header << "extern const long long " << identifier << "_length;" << "\n";
+            header << "extern const unsigned long long " << identifier << "_length;" << "\n";
             l_write_c_linkage_end(header);
             header << "#endif" << "\n";
 
@@ -126,4 +151,16 @@ int main(int argc, char ** argv) {
     }
     
     return 0;
+}
+
+int main(int argc, char ** argv) {
+    try {
+        return main0(argc, argv);
+    } catch (std::exception & ex) {
+        std::cerr << "uncaught exception" << std::endl;
+        std::cerr << "what(): " << ex.what() << std::endl;
+    } catch (...) {
+        std::cerr << "uncaught unknwon exception" << std::endl;
+    }
+    return -2;
 }
