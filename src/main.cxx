@@ -15,22 +15,22 @@ int main(int argc, char ** argv) {
     const char * data_type = nullptr;
     signed char use_c_linkage = 0;
 
+    using namespace CxxCli;
+
+    auto cmd = Command(
+        Loop(
+            Sequence(
+                Sequence(Optional(Sequence(Const("--identifier"), Var("identifier") >> &identifier))) & UsageAsList & Doc("use identifier"),
+                Sequence(Optional(Sequence(Const("--target"), Var("target") >> &target))) & UsageAsList & Doc("target file to embed"),
+                Sequence(Optional(Sequence(Const("--out-src-path"), Var("source") >> &src_name))) & UsageAsList & Doc("source path to output to"),
+                Sequence(Optional(Sequence(Const("--out-header-path"), Var("header") >> &header_name))) & UsageAsList & Doc("header path to output to"),
+                Sequence(Optional(Sequence(Const("--data-type"), Var("data-type") >> &data_type))) & UsageAsList & Doc("c++ data type to store data as [default = unsigned char]"),
+                Sequence(Optional(Const("--use-c-linkage") >> [&] { use_c_linkage = 1; })) & UsageAsList & Doc("declare embedded accessors with 'extern \"C\"' linkage")
+            ) & UsageAsList
+        )
+    );
+
     {
-        using namespace CxxCli;
-
-        auto cmd = Command(
-            Loop(
-                Sequence(
-                    Optional(Sequence(Const("--identifier"), Var() >> [&] (const char * v) { identifier = v; })),
-                    Optional(Sequence(Const("--target"), Var() >> [&] (const char * v) { target = v; })),
-                    Optional(Sequence(Const("--out-src-path"), Var() >> [&] (const char * v) { src_name = v; })),
-                    Optional(Sequence(Const("--out-header-path"), Var() >> [&] (const char * v) { header_name = v; })),
-                    Optional(Sequence(Const("--data-type"), Var() >> [&] (const char * v) { data_type = v; })),
-                    Optional(Const("--use-c-linkage") >> [&] { use_c_linkage = 1; })
-                )
-            )
-        );
-
         auto r = cmd.parse(argc - 1, argv + 1);
         if (!r) {
             n_print("Failed to parse args");
@@ -39,10 +39,10 @@ int main(int argc, char ** argv) {
         }
     }
 
-    if (identifier == nullptr) { n_print("identifier not set"); return 1; }
-    if (target == nullptr) { n_print("target not set"); return 1; }
-    if (src_name == nullptr) { n_print("source name not set"); return 1; }
-    if (header_name == nullptr) { n_print("header name not set"); return 1; }
+    if (identifier == nullptr) { n_print("identifier not set"); cmd.printUsage(std::cerr, argv[0]); return 1; }
+    if (target == nullptr) { n_print("target not set"); cmd.printUsage(std::cerr, argv[0]); return 1; }
+    if (src_name == nullptr) { n_print("source name not set"); cmd.printUsage(std::cerr, argv[0]); return 1; }
+    if (header_name == nullptr) { n_print("header name not set"); cmd.printUsage(std::cerr, argv[0]); return 1; }
     if (data_type == nullptr) { data_type = "unsigned char"; }
 
     {
