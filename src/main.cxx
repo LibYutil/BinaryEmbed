@@ -1,5 +1,6 @@
 
 #include <memory>
+#include <string>
 #include <fstream>
 #include <iostream>
 #define n_print(expr) std::cout << expr << std::endl
@@ -8,9 +9,9 @@
 
 namespace {
     template <class x>
-    struct array_delete {
-        constexpr array_delete() noexcept = default;
-        void operator()(x * o) const noexcept { delete[] o; }
+    struct malloc_delete {
+        constexpr malloc_delete() noexcept = default;
+        void operator()(x * o) const noexcept { o->~x(); std::free(o); }
     };
 }
 
@@ -37,7 +38,7 @@ static int main0(int argc, char ** argv) {
                 Sequence(Optional(Sequence(Const("--out-header-path"), Var("header") >> &header_name))) & UsageAsList & Doc("header path to output to"),
                 Sequence(Optional(Sequence(Const("--data-type"), Var("data-type") >> &data_type))) & UsageAsList & Doc("c++ data type to store data as [default = unsigned char]"),
                 Sequence(Optional(Const("--use-c-linkage") >> [&] { use_c_linkage = true; })) & UsageAsList & Doc("declare embedded accessors with 'extern \"C\"' linkage"),
-                Sequence(Optional(Sequence(Const("--copy-buffer"), Var("copy-buffer") >> &buffer_size))) & UsageAsList & Doc("size of the copy buffer to use [default = 256, min = 256]")
+                Sequence(Optional(Sequence(Const("--copy-buffer"), Var("copy-buffer") >> &buffer_size))) & UsageAsList & Doc("size of the copy buffer to use [default, min = 256]")
             ) & UsageAsList
         )
     );
@@ -56,7 +57,7 @@ static int main0(int argc, char ** argv) {
     if (src_name == nullptr) { n_print("source name not set"); cmd.printUsage(std::cerr, argv[0]); return -1; }
     if (header_name == nullptr) { n_print("header name not set"); cmd.printUsage(std::cerr, argv[0]); return -1; }
     if (data_type == nullptr) { data_type = "unsigned char"; }
-    if (buffer_size < 256) { n_print("copy-buffer too small: " << buffer_size); return -1; }
+    if (buffer_size < default_buffer_size) { n_print("copy-buffer too small: " << buffer_size); return -1; }
 
     {
         auto l_write_c_linkage_start = [&] (std::ofstream & s) {
@@ -78,11 +79,11 @@ static int main0(int argc, char ** argv) {
         {
             std::ifstream input(target, std::ios::binary);
             if (!input) { n_print("failed to open target file: " << target); return -1; }
-            //input.exceptions(std::ios_base::failbit);
+            input.exceptions(std::ios_base::badbit);
 
             std::ofstream src(src_name, std::ios::trunc);
             if (!src) { n_print("failed to open source file" << src_name); return -1; }
-            src.exceptions(std::ios_base::failbit);
+            src.exceptions(std::ios_base::badbit | std::ios_base::failbit);
 
             src << "\n";
 
@@ -92,30 +93,43 @@ static int main0(int argc, char ** argv) {
                 src << "static const " << data_type <<  " " << identifier << "_data0[] = {";
                 {
                     unsigned char stackBuffer[default_buffer_size];
-                    std::unique_ptr<unsigned char, array_delete<unsigned char>> heapBuffer;
+                    std::unique_ptr<unsigned char, malloc_delete<unsigned char>> heapBuffer;
                     unsigned char * buffer;
                     if (buffer_size <= default_buffer_size) {
                         buffer = stackBuffer;
                     } else {
                         buffer = (unsigned char *)std::malloc(buffer_size);
+                        if (buffer == nullptr) { throw std::bad_alloc(); }
                         heapBuffer.reset(buffer);
                     }
-                    std::streamsize count;
 
-                    if (!input.eof()) {
-                        count = input.readsome((char *)buffer, buffer_size);
-                        if (count == 0 || input.fail()) { goto lbl_skip_read; }
-                        src << (unsigned)buffer[0];
-                        for (std::streamsize i = 1; i < count; ++i) { src << ',' << (unsigned short)buffer[i]; }
-                        length += count;
+                    auto readData = [&] () -> int {
+                        std::streamsize bufPos = 0;
+                        while (bufPos < buffer_size && !input.eof()) {
+                            input.read((char *)buffer, buffer_size - bufPos);
+                            if (!input.eof() && input.fail()) { throw std::runtime_error("failed to read target file"); }
+                            std::streamsize count = input.gcount();
+                            if (count == 0) { break; }
+                            bufPos += count;
+                            length += count;
+                        }
+                        return bufPos; // data count available
+                    };
+
+                    {
+                        auto i = readData();
+                        if (i != 0) {
+                            src << (unsigned short)buffer[0];
+                            for (std::streamsize j = 1; j < i; ++j) {
+                                src << ',' << (unsigned short)buffer[j];
+                            }
+                        }
                     }
-                    while (!input.eof()) {
-                        count = input.readsome((char *)buffer, buffer_size);
-                        if (count == 0 || input.fail()) { break; }
-                        for (std::streamsize i = 0; i < count; ++i) { src << ',' << (unsigned short)buffer[i]; }
-                        length += count;
+                    for (auto i = readData(); i != 0; i = readData()) {
+                        for (std::streamsize j = 0; j < i; ++j) {
+                            src << ',' << (unsigned short)buffer[j];
+                        }
                     }
-                lbl_skip_read:;
                 }
                 src << "};" << "\n";
 
