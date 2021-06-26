@@ -21,7 +21,7 @@ if(NOT cxxcli_POPULATED)
     FetchContent_Populate(cxxcli)
 endif()
 
-add_executable(binembed-generator src/main.cxx)
+add_executable(binembed-generator binembed-generator.cxx)
 target_include_directories(binembed-generator PRIVATE "${cxxcli_SOURCE_DIR}/include")
 
 #[[

@@ -75,7 +75,7 @@ static int main0(int argc, char ** argv) {
             }
         };
         unsigned long long length = 0;
-
+         
         {
             std::ifstream input(target, std::ios::binary);
             if (!input) { n_print("failed to open target file: " << target); return -1; }
