@@ -37,12 +37,12 @@ static int main0(int argc, char ** argv) {
 
         rt stack_buffer[static_buffer_size / sizeof(rt)];
         std::vector<rt> heap_buffer;
-        unsigned char * buffer;
+        rt * buffer;
         if (buffer_size <= static_buffer_size) {
-            buffer = reinterpret_cast<unsigned char *>(stack_buffer);
+            buffer = stack_buffer;
         } else {
             heap_buffer.resize(buffer_size / sizeof(rt));
-            buffer = reinterpret_cast<unsigned char *>(&heap_buffer[0]);
+            buffer = &heap_buffer[0];
         }
 
         using ull = unsigned long long;
@@ -50,7 +50,7 @@ static int main0(int argc, char ** argv) {
 
         auto fillBuffer = [&] () {
             for (ull i = 0, l = (buffer_size / sizeof(rt)); i < l; ++i) {
-                buffer[i * sizeof(rt)] = engine();
+                buffer[i] = engine();
             }
         };
 
