@@ -103,7 +103,7 @@ static int main0(int argc, char ** argv) {
                         heapBuffer.reset(buffer);
                     }
 
-                    auto readData = [&] () -> int {
+                    auto readData = [&] () -> std::streamsize {
                         std::streamsize bufPos = 0;
                         while (bufPos < buffer_size && !input.eof()) {
                             input.read((char *)buffer, buffer_size - bufPos);
