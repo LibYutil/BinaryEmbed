@@ -54,3 +54,4 @@ ToDo
 Tested Compilers
 ----------------
 - msvc 19
+- g++ 8.3.0
