@@ -16,10 +16,15 @@ macro(binembed_add_test byteSize)
 	set(tdid testData_${byteSize}B)
 
 	set(generated_file "${CMAKE_CURRENT_BINARY_DIR}/${tdid}")
-	add_custom_target(generate-test-data-${byteSize}B COMMAND be-util-rgen ${byteSize} "${generated_file}")
+	add_custom_command(
+		OUTPUT "${generated_file}"
+		COMMAND be-util-rgen ${byteSize} "${generated_file}"
+		DEPENDS be-util-rgen
+	)
+	#add_custom_target(generate-test-data-${byteSize}B COMMAND be-util-rgen ${byteSize} "${generated_file}")
 
 	BinEmbed_AddEmbedding(${tdid} "${generated_file}")
-	add_dependencies(BEMBED_${tdid}_BUILD generate-test-data-${byteSize}B)
+	#add_dependencies(BEMBED_${tdid}_BUILD generate-test-data-${byteSize}B)
 
 	set(tid be-test-${byteSize}B)
 	set(testFileHeader "${BEMBED_${tdid}_HEADER}")

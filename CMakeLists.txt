@@ -39,7 +39,10 @@ BinEmbed_AddEmbedding(IDENTIFIER TARGET_FILE)
             - defines data field "extern const unsigned char * const ${IDENTIFIER}_data;"
             - defines size field "extern const long long ${IDENTIFIER}_length;"
         - BEMBED_${IDENTIFIER}_BUILD : cmake target
-            - should be added as a dependency to anything that uses *_INCLUDE_DIRS or *_SRC
+            - can be added as a dependency to anything that uses *_INCLUDE_DIRS or *_SRC
+            - NOTE: output files are generated with 'add_custom_command'
+                - therefore they can be added as direct dependencies to other targets/commands
+                - such pattern will elliminate a rebuild that 'add_custom_target' introduces
     include header: #include "binembed/${IDENTIFIER}.hxx"
         - contains declaration for the embedded data
 ]]
@@ -63,22 +66,24 @@ macro(BinEmbed_AddEmbedding IDENTIFIER TARGET_FILE)
 
     get_filename_component(r "${TARGET_FILE}" ABSOLUTE)
 
-    # dependency we should build before building anything that depends on this target
-    add_custom_target(
-        BEMBED_${IDENTIFIER}_BUILD
-        COMMAND "$<TARGET_FILE:binembed-generator>"
+    add_custom_command(
+        OUTPUT "${BEMBED_${IDENTIFIER}_SRC}" "${BEMBED_${IDENTIFIER}_HEADER}"
+        COMMAND binembed-generator
             --target "${r}"
             --out-src-path "${BEMBED_${IDENTIFIER}_SRC}"
             --out-header-path "${BEMBED_${IDENTIFIER}_HEADER}"
             --identifier "${IDENTIFIER}"
             --data-type "unsigned char"
             --use-c-linkage
-        DEPENDS binembed-generator
-        BYPRODUCTS
-            "${BEMBED_${IDENTIFIER}_SRC}"
-            "${BEMBED_${IDENTIFIER}_HEADER}"
+        DEPENDS binembed-generator "${TARGET_FILE}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Generating embedding: ${IDENTIFIER}"
+    )
+
+    # dependency we should build before building anything that depends on this target
+    add_custom_target(
+        BEMBED_${IDENTIFIER}_BUILD
+        DEPENDS "${BEMBED_${IDENTIFIER}_SRC}" "${BEMBED_${IDENTIFIER}_HEADER}"
     )
 
     message(STATUS "Embedding added: ${IDENTIFIER}")
