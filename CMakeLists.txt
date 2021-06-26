@@ -61,11 +61,12 @@ macro(BinEmbed_AddEmbedding IDENTIFIER TARGET_FILE)
     # sources to build for this target
     set(BEMBED_${IDENTIFIER}_SRC "${BEMBED_${IDENTIFIER}_DIR}/${IDENTIFIER}.cxx")
 
-    # somethng will probably complain if there are no directories
+    # something will probably complain if there are no directories
     file(MAKE_DIRECTORY "${BEMBED_${IDENTIFIER}_INCLUDE_DIRS}/binembed")
 
     get_filename_component(r "${TARGET_FILE}" ABSOLUTE)
 
+    # command to generate target files
     add_custom_command(
         OUTPUT "${BEMBED_${IDENTIFIER}_SRC}" "${BEMBED_${IDENTIFIER}_HEADER}"
         COMMAND binembed-generator
@@ -80,7 +81,7 @@ macro(BinEmbed_AddEmbedding IDENTIFIER TARGET_FILE)
         COMMENT "Generating embedding: ${IDENTIFIER}"
     )
 
-    # dependency we should build before building anything that depends on this target
+    # dependency target
     add_custom_target(
         BEMBED_${IDENTIFIER}_BUILD
         DEPENDS "${BEMBED_${IDENTIFIER}_SRC}" "${BEMBED_${IDENTIFIER}_HEADER}"

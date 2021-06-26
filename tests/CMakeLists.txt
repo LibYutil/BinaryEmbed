@@ -21,10 +21,8 @@ macro(binembed_add_test byteSize)
 		COMMAND be-util-rgen ${byteSize} "${generated_file}"
 		DEPENDS be-util-rgen
 	)
-	#add_custom_target(generate-test-data-${byteSize}B COMMAND be-util-rgen ${byteSize} "${generated_file}")
 
 	BinEmbed_AddEmbedding(${tdid} "${generated_file}")
-	#add_dependencies(BEMBED_${tdid}_BUILD generate-test-data-${byteSize}B)
 
 	set(tid be-test-${byteSize}B)
 	set(testFileHeader "${BEMBED_${tdid}_HEADER}")
@@ -34,7 +32,6 @@ macro(binembed_add_test byteSize)
 	configure_file(test.cxx.in "${CMAKE_CURRENT_BINARY_DIR}/test-${byteSize}B.cxx")
 	add_executable(be-test-${byteSize}B "${CMAKE_CURRENT_BINARY_DIR}/test-${byteSize}B.cxx" "${BEMBED_${tdid}_SRC}")
 	target_include_directories(be-test-${byteSize}B PRIVATE ${BEMBED_${tdid}_INCLUDE_DIRS})
-	add_dependencies(be-test-${byteSize}B BEMBED_${tdid}_BUILD)
 
 	add_test(NAME test-be-test-${byteSize}B COMMAND be-test-${byteSize}B)
 endmacro()
