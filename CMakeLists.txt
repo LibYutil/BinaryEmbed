@@ -79,6 +79,12 @@ macro(BinEmbed_AddEmbedding)
         set(append_null "--append-null")
     endif()
 
+    set(dependencies binembed-generator)
+    get_source_file_property(v "${A_TARGET_FILE}" GENERATED)
+    if(v)
+        list(APPEND dependencies "${A_TARGET_FILE}")
+    endif()
+
     # command to generate target files
     add_custom_command(
         OUTPUT "${BEMBED_${A_IDENTIFIER}_SRC}" "${BEMBED_${A_IDENTIFIER}_HEADER}"
@@ -90,7 +96,7 @@ macro(BinEmbed_AddEmbedding)
             --data-type "unsigned char"
             --use-c-linkage
             ${append_null}
-        DEPENDS binembed-generator "${A_TARGET_FILE}"
+        DEPENDS ${dependencies}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Generating embedding: ${A_IDENTIFIER}"
     )
