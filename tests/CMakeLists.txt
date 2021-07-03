@@ -22,7 +22,7 @@ macro(binembed_add_test byteSize)
 		DEPENDS be-util-rgen
 	)
 
-	BinEmbed_AddEmbedding(${tdid} "${generated_file}")
+	BinEmbed_AddEmbedding(IDENTIFIER ${tdid} TARGET_FILE "${generated_file}")
 
 	set(tid be-test-${byteSize}B)
 	set(testFileHeader "${BEMBED_${tdid}_HEADER}")

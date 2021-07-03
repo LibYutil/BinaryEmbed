@@ -9,9 +9,9 @@
 
 int main(int argc, char ** argv) {
 
-    const unsigned char expectedData[] = { 'b', 'i', 'n', 'a', 'r', 'y', ' ', 'd', 'a', 't', 'a' };
+    constexpr const char expectedData[] = "binary data";
 
-    assert((sizeof(expectedData) / sizeof(unsigned char)) == someBinary_file_length);
-    assert(std::memcmp(someBinary_file_data, expectedData, someBinary_file_length) == 0);
+    assert(sizeof(expectedData) == someBinary_file_length);
+    assert(std::strcmp((const char *)someBinary_file_data, expectedData) == 0);
 
 }

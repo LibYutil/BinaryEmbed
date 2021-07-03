@@ -25,6 +25,7 @@ static int main0(int argc, char ** argv) {
     const char * header_name = nullptr;
     const char * data_type = nullptr;
     bool use_c_linkage = false;
+    bool append_0 = false;
     long long buffer_size = default_buffer_size;
 
     using namespace CxxCli;
@@ -38,6 +39,7 @@ static int main0(int argc, char ** argv) {
                 Sequence(Optional(Sequence(Const("--out-header-path"), Var("header") >> &header_name))) & UsageAsList & Doc("header path to output to"),
                 Sequence(Optional(Sequence(Const("--data-type"), Var("data-type") >> &data_type))) & UsageAsList & Doc("c++ data type to store data as [default = unsigned char]"),
                 Sequence(Optional(Const("--use-c-linkage") >> [&] { use_c_linkage = true; })) & UsageAsList & Doc("declare embedded accessors with 'extern \"C\"' linkage"),
+                Sequence(Optional(Const("--append-null") >> [&] { append_0 = true; })) & UsageAsList & Doc("append null character at the end of the embedded data"),
                 Sequence(Optional(Sequence(Const("--copy-buffer"), Var("copy-buffer") >> &buffer_size))) & UsageAsList & Doc("size of the copy buffer to use [default, min = 256]")
             ) & UsageAsList
         )
@@ -131,6 +133,13 @@ static int main0(int argc, char ** argv) {
                         }
                     }
                 }
+
+                if (append_0) {
+                    if (length > 0) { src << ','; }
+                    src << (unsigned short)0;
+                    ++length;
+                }
+
                 src << "};" << "\n";
 
                 src << "\n";
