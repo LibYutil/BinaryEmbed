@@ -13,7 +13,7 @@ include(FetchContent)
 
 FetchContent_Declare(
     cxxcli
-    GIT_REPOSITORY https://github.com/LibYutil/CxxCli.git
+    GIT_REPOSITORY https://github.com/ZephyrLib/CxxCli.git
     GIT_TAG d49ee424e6bd5a5a04c1a2172aac92c309574701
     UPDATE_DISCONNECTED TRUE
 )
