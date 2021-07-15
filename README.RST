@@ -12,20 +12,25 @@ What is this?
 CMake
 -----
 #. Start with adding this project into build
-    - ``add_subdirectory(./path/to/BinaryEmbed)``
+
+   - ``add_subdirectory(./path/to/BinaryEmbed)``
 
 #. Add embedding
-    - ``BinEmbed_AddEmbedding(${identifier} "./path/to/target.file")``
+
+   - ``BinEmbed_AddEmbedding(${identifier} "./path/to/target.file")``
 
 #. Add embedding sources to some dependent library/executable
-    - ``target_sources(<target> PRIVATE ${BEMBED_${identifier}_SRC})``
+
+   - ``target_sources(<target> PRIVATE ${BEMBED_${identifier}_SRC})``
 
 #. Add embedding headers
-    - ``target_include_directories(<target> PRIVATE ${BEMBED_${identifier}_INCLUDE_DIRS})``
+
+   - ``target_include_directories(<target> PRIVATE ${BEMBED_${identifier}_INCLUDE_DIRS})``
 
 #. Add embedding dependency [optional]
-    - ``add_dependencies(<target> BEMBED_${identifier}_BUILD)``
-    - only needed in some cases when some target does not depend on neither ``*_SRC`` or ``*_HEADER`` but requires any of them
+
+   - ``add_dependencies(<target> BEMBED_${identifier}_BUILD)``
+   - only needed in some cases when some target does not depend on neither ``*_SRC`` or ``*_HEADER`` but requires any of them
 
 #. ``#include "binembed/${identifier}.hxx"``
 
